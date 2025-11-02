@@ -1,0 +1,24 @@
+{
+    "railway": {
+        "line": "FZ602",
+        "lineID": 6
+    },
+    "train": {
+        "trainNum": 1,
+        "trainInfo": 6011,
+        "trainLoad": 216.0
+    },
+    "serial": {
+        "portName": "COM1",
+        "baudRate": 115200
+    },
+    "simulation": {
+        "runMode": "LINE",
+        "dataProcessMode": "INTERPOLATION",
+        "csvFile": "",
+        "stopTimeMin": 30,
+        "stopTimeMax": 60,
+        "enableFrameSplit": false
+    }
+}
+

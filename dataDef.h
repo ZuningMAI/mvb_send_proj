@@ -1,8 +1,6 @@
 #ifndef DATADEF_H
 #define DATADEF_H
 
-#endif // DATADEF_H
-
 #include <qendian.h>
 #include <QDebug>
 
@@ -448,4 +446,4 @@ struct AirbrakePowerStruct
     }
 };
 
-
+#endif // DATADEF_H

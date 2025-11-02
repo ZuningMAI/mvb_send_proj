@@ -1,0 +1,50 @@
+# Qt编译和运行产生的文件
+*.pro.user
+*.pro.user.*
+*.autosave
+*.qmlc
+*.jsc
+*.o
+*.obj
+*.exe
+*.dll
+*.so
+*.dylib
+*.a
+*.lib
+*.exp
+*.pdb
+
+# qmake生成的Makefile
+Makefile
+Makefile.*
+!*.pro
+
+# Qt MOC文件
+moc_*.cpp
+moc_*.h
+moc/
+ui_*.h
+
+# Qt编译目录
+debug/
+release/
+obj/
+object_script.*
+
+# 临时文件
+*.swp
+*.swo
+*~
+.DS_Store
+
+# .vscode目录的所有文件
+.vscode/
+
+# DOCS文件夹及其所有内容
+DOCS/
+
+# 除了README.md之外的其他md文件
+*.md
+!README.md
+
