@@ -15,9 +15,10 @@
 *.exp
 *.pdb
 
-# qmake生成的Makefile
+# qmake生成的Makefile和缓存文件
 Makefile
 Makefile.*
+.qmake.stash
 !*.pro
 
 # Qt MOC文件
