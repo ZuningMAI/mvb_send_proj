@@ -1,4 +1,5 @@
 #include "serial_sender.h"
+#include "logger.h"
 #include <QDebug>
 #include <cstdlib>
 #include <ctime>
@@ -24,15 +25,47 @@ bool SerialSender::sendData(const QByteArray &usartPppFrame)
     
     // 如果启用了帧截断且帧长度大于34字节（包含头尾0x7E）
     if (m_enableFrameSplit && usartPppFrame.size() > 34) {
+        // 提取原始PD号
+        quint8 pdType = 0x00;
+        if (usartPppFrame.size() >= 5 && static_cast<quint8>(usartPppFrame[0]) == 0x7E) {
+            pdType = static_cast<quint8>(usartPppFrame[4]);
+        }
+        
         QVector<QByteArray> frames = splitFrame(usartPppFrame);
         
         bool allSuccess = true;
-        for (const QByteArray &frame : frames) {
-            if (!sendToSerial(frame)) {
+        for (int i = 0; i < frames.size(); ++i) {
+            const QByteArray &frame = frames[i];
+            
+            // 发送帧
+            QString hexData = frame.toHex(' ');
+            LOG_INFO(QString("发送的USART-PPP帧数据（分段%1/%2）：%3").arg(i+1).arg(frames.size()).arg(hexData));
+            LOG_INFO(QString("尝试发送%1字节数据到串口").arg(frame.size()));
+            
+            qint64 bytesWritten = m_serial->write(frame);
+            
+            if (bytesWritten == -1) {
+                qWarning() << "发送数据失败:" << m_serial->errorString();
+                LOG_ERROR(QString("发送数据失败: %1").arg(m_serial->errorString()));
                 allSuccess = false;
+                continue;
             }
-            // 可以在这里添加延迟，如果需要的话
-            // QThread::msleep(10);
+            
+            if (!m_serial->waitForBytesWritten(1000)) {
+                qWarning() << "等待发送超时";
+                LOG_ERROR("等待发送超时");
+                allSuccess = false;
+                continue;
+            }
+            
+            LOG_INFO(QString("成功发送%1字节数据到串口").arg(bytesWritten));
+            
+            // 记录分段帧到日志（只有第一个分段有PD号）
+            if (i == 0) {
+                LOG_FRAME(pdType, QString("分段1/%1: %2").arg(frames.size()).arg(hexData), bytesWritten, frame.size());
+            } else {
+                LOG_FRAME(0x00, QString("分段%1/%2(续): %3").arg(i+1).arg(frames.size()).arg(hexData), bytesWritten, frame.size());
+            }
         }
         
         return allSuccess;
@@ -111,9 +144,9 @@ QVector<QByteArray> SerialSender::splitFrame(const QByteArray &frame)
     result.append(frame1);
     result.append(frame2);
     
-    qDebug() << "帧已分割: 原始" << frame.size() << "字节 -> " 
-             << frame1.size() << "字节 + " << frame2.size() << "字节";
-    
+    // qDebug() << "帧已分割: 原始" << frame.size() << "字节 -> " 
+    //          << frame1.size() << "字节 + " << frame2.size() << "字节";
+    LOG_INFO(QString("帧已分割: 原始%1字节 -> %2字节 + %3字节").arg(frame.size()).arg(frame1.size()).arg(frame2.size()));
     return result;
 }
 
@@ -121,27 +154,45 @@ bool SerialSender::sendToSerial(const QByteArray &data)
 {
     if (!m_serial || !m_serial->isOpen()) {
         qWarning() << "串口未打开";
+        LOG_ERROR("串口未打开，无法发送数据");
         return false;
     }
     
+    // 提取PD号（如果可能）
+    // 帧格式: 7E + (21 + size(2) + PD(1) + data) + CRC(2) + 7E
+    quint8 pdType = 0x00;
+    if (data.size() >= 5 && static_cast<quint8>(data[0]) == 0x7E) {
+        pdType = static_cast<quint8>(data[4]);  // 第5个字节是PD号
+    }
+    
     // 显示16进制数据
-    qDebug() << "发送的USART-PPP帧数据：" << "\"" + data.toHex(' ') + "\"";
-    qDebug() << "尝试发送" << data.size() << "字节数据到串口";
+    QString hexData = data.toHex(' ');
+    // qDebug() << "发送的USART-PPP帧数据：" << "\"" + hexData + "\"";
+    // qDebug() << "尝试发送" << data.size() << "字节数据到串口";
+    // 用LOG_INFO记录发送的USART-PPP帧数据
+    LOG_INFO(QString("发送的USART-PPP帧数据：%1").arg(hexData));
+    LOG_INFO(QString("尝试发送%1字节数据到串口").arg(data.size()));
     
     qint64 bytesWritten = m_serial->write(data);
     
     if (bytesWritten == -1) {
         qWarning() << "发送数据失败:" << m_serial->errorString();
+        LOG_ERROR(QString("发送数据失败: %1").arg(m_serial->errorString()));
         return false;
     }
     
     // 等待数据发送完成
     if (!m_serial->waitForBytesWritten(1000)) {
         qWarning() << "等待发送超时";
+        LOG_ERROR("等待发送超时");
         return false;
     }
     
-    qDebug() << "成功发送" << bytesWritten << "字节数据到串口";
+    // qDebug() << "成功发送" << bytesWritten << "字节数据到串口";
+    LOG_INFO(QString("成功发送%1字节数据到串口").arg(bytesWritten));
+    
+    // 记录到日志文件
+    LOG_FRAME(pdType, hexData, bytesWritten, data.size());
     
     return true;
 }

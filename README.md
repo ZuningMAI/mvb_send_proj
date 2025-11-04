@@ -9,7 +9,7 @@
 - ✅ 支持三种端口类型的周期性数据发送：
   - PD 0xFF：时间数据（512ms 周期）
   - PD 0xF1~0xF4：车号数据（1024ms 周期）
-  - PD 0xA0：车辆状态数据（512ms 周期）
+  - PD 0xA0：车辆状态数据（128ms 周期）
 - ✅ 从 CSV 文件读取列车运行轨迹数据
 - ✅ 支持两种运行模式：区间模式和线路模式
 - ✅ 支持两种数据处理方式：维持和插值
@@ -21,6 +21,11 @@
 - **限速查询**：根据位置自动查询限速值
 - **力分解**：自动将CSV中的力分解为牵引力和制动力（电制动+空气制动）
 - **停站模拟**：每个区间完成后随机停站30-60秒
+
+### 日志功能
+- **运行日志**：自动记录每次运行的详细信息到 `bin/Log/` 目录
+- **CSV运行记录**：导出运行数据为CSV格式，便于分析
+- **时间戳**：所有日志文件自动添加时间戳
 
 ## 项目结构
 
@@ -38,14 +43,17 @@ mvb_send_demo/
 ├── data_generator.h/cpp        // 数据生成器
 ├── serial_sender.h/cpp         // 串口发送器
 ├── simulation_controller.h/cpp // 仿真控制器
+├── logger.h/cpp                // 日志记录器
+├── runinfo_logger.h/cpp        // 运行信息记录器
 └── bin/                        // 编译输出目录
     ├── config.json             // 区间模式配置文件
     ├── config_line_mode.json   // 线路模式配置文件
     ├── README.txt              // 运行说明
     ├── mvb_send_demo.exe       // 编译后的可执行文件
+    ├── Log/                    // 日志输出目录（运行时生成，已忽略）
     └── data/                   // CSV数据文件
-        ├── FZ601/              // FZ601线路数据（13个区间）
-        └── FZ602/              // FZ602线路数据（13个区间）
+        ├── FZ601/              // FZ601线路数据（18个区间）
+        └── FZ602/              // FZ602线路数据（18个区间）
 ```
 
 ## 编译和运行
@@ -107,10 +115,12 @@ cd bin
     "simulation": {
         "runMode": "SECTION",  // 运行模式：SECTION（区间）或 LINE（线路）
         "dataProcessMode": "INTERPOLATION",  // 数据处理：INTERPOLATION（插值）或 MAINTAIN（维持）
-        "csvFile": "data/FZ602/interactive_test_FZ602-1-2_dv1e-22025-10-26_18-00-30/OptReslog.2025-10-26_18-00-30-FZ602-1-2-85.csv",
+        "csvFile": "data/FZ602/interactive_test_FZ602-12-13_dv1e-22025-11-03_21-29-11/OptReslog.2025-11-03_21-29-11-FZ602-12-13-250.csv",
         "stopTimeMin": 30,     // 停站时间最小值（秒）
         "stopTimeMax": 60,     // 停站时间最大值（秒）
-        "enableFrameSplit": false  // 是否启用帧截断功能
+        "enableFrameSplit": true,           // 是否启用帧截断功能
+        "runInfoPeriodMs": 128,             // PD=0xA0端口对应的周期
+        "enableRunInfoLogging": false       // 是否启用运行信息CSV日志记录
     }
 }
 ```
@@ -133,15 +143,42 @@ cd bin
         "baudRate": 115200
     },
     "simulation": {
-        "runMode": "LINE",     // 线路模式
+        "runMode": "LINE",                  // 线路模式
         "dataProcessMode": "INTERPOLATION",
-        "csvFile": "",         // 线路模式下此字段不使用
+        "csvFile": "",                      // 线路模式下此字段不使用
         "stopTimeMin": 30,
         "stopTimeMax": 60,
-        "enableFrameSplit": false
+        "enableFrameSplit": false,
+        "runInfoPeriodMs": 128,             // PD=0xA0端口对应的周期
+        "enableRunInfoLogging": false       // 是否启用运行信息CSV日志记录
     }
 }
 ```
+
+### 配置参数说明
+
+#### 日志相关参数
+
+- **`runInfoPeriodMs`** (可设置，默认 128ms)
+  - 运行信息记录周期，单位为毫秒
+  - 控制运行信息日志的采样频率
+  - 建议值：64、128、256 ms
+
+- **`enableRunInfoLogging`** (可选，默认 false)
+  - 是否启用运行信息CSV日志记录
+  - 启用后会在 `bin/Log/` 目录生成 `RunInfo_[线路]-[区间]_[时间戳].csv` 文件
+  - 包含：时间、位置、速度、限速、牵引力、制动力等详细信息
+  - 适用于数据分析和性能评估
+
+#### 其他参数说明
+
+- **`enableFrameSplit`**: 启用后会将大于32字节的帧随机分割成16-25字节的小帧发送，用于测试接收端的帧重组能力
+- **`dataProcessMode`**: 
+  - `INTERPOLATION`（插值）：平滑的数据变化，推荐用于仿真
+  - `MAINTAIN`（维持）：阶梯状数据变化，处理速度更快
+- **`runMode`**:
+  - `SECTION`（区间）：运行单个区间，需指定 `csvFile`
+  - `LINE`（线路）：运行整条线路的所有区间
 
 ## 数据说明
 
@@ -192,7 +229,7 @@ CSV文件包含列车运行轨迹数据，格式如下：
 - 内容：列车号、车辆号、设置标志位
 
 ### PD 0xA0 - 车辆状态数据
-- 周期：512ms
+- 周期：128ms
 - 大小：32字节
 - 内容：
   - 生命信号（每512ms递增）
@@ -216,6 +253,7 @@ CSV文件包含列车运行轨迹数据，格式如下：
 - 确认 `bin/data/` 目录存在
 - 确认 `bin/data/FZ601/` 或 `bin/data/FZ602/` 目录存在
 - 检查配置文件中的 `csvFile` 路径是否正确（相对于 bin 目录）
+- 确保 CSV 数据文件已正确部署到 `bin/data/` 目录
 
 ### 3. 数据不更新
 - 检查定时器是否正常启动

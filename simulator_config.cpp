@@ -17,6 +17,8 @@ SimulatorConfig::SimulatorConfig()
     , m_stopTimeMin(30)
     , m_stopTimeMax(60)
     , m_enableFrameSplit(false)
+    , m_runInfoPeriodMs(512)  // 默认512ms
+    , m_enableRunInfoLogging(false)  // 默认不启用RunInfo记录
 {
 }
 
@@ -82,6 +84,17 @@ bool SimulatorConfig::loadFromFile(const QString &filePath)
         m_stopTimeMin = simulation["stopTimeMin"].toInt(30);
         m_stopTimeMax = simulation["stopTimeMax"].toInt(60);
         m_enableFrameSplit = simulation["enableFrameSplit"].toBool(false);
+        
+        // 读取状态数据周期，默认512ms，支持 128/256/512
+        m_runInfoPeriodMs = simulation["runInfoPeriodMs"].toInt(512);
+        // 验证周期值是否合法
+        if (m_runInfoPeriodMs != 128 && m_runInfoPeriodMs != 256 && m_runInfoPeriodMs != 512) {
+            qWarning() << "状态数据周期值无效:" << m_runInfoPeriodMs << ", 使用默认值512ms";
+            m_runInfoPeriodMs = 512;
+        }
+        
+        // 读取RunInfo数据记录开关
+        m_enableRunInfoLogging = simulation["enableRunInfoLogging"].toBool(false);
     }
     
     qDebug() << "配置文件加载成功:" << filePath;
@@ -119,6 +132,8 @@ bool SimulatorConfig::saveToFile(const QString &filePath) const
     simulation["stopTimeMin"] = m_stopTimeMin;
     simulation["stopTimeMax"] = m_stopTimeMax;
     simulation["enableFrameSplit"] = m_enableFrameSplit;
+    simulation["runInfoPeriodMs"] = m_runInfoPeriodMs;
+    simulation["enableRunInfoLogging"] = m_enableRunInfoLogging;
     root["simulation"] = simulation;
     
     QJsonDocument doc(root);

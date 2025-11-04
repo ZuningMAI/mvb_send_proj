@@ -18,7 +18,9 @@
         "csvFile": "",
         "stopTimeMin": 30,
         "stopTimeMax": 60,
-        "enableFrameSplit": false
+        "enableFrameSplit": false,
+        "runInfoPeriodMs": 128,
+        "enableRunInfoLogging": false
     }
 }
 

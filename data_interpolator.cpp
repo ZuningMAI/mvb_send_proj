@@ -80,7 +80,7 @@ TrajectoryPoint DataInterpolator::maintain(const QVector<TrajectoryPoint> &traje
 int DataInterpolator::findTimeInterval(const QVector<TrajectoryPoint> &trajectory,
                                       double currentTime)
 {
-    // 二分查找
+    // 二分查找(relativeTime是有序数据)
     int left = 0;
     int right = trajectory.size() - 1;
     

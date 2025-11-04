@@ -202,9 +202,9 @@ QString CSVReader::findSectionCSV(const QString &railwayLine, int startStn, int 
 
 int CSVReader::getLineStationCount(const QString &railwayLine)
 {
-    // FZ601 和 FZ602 都有14个站（13个区间）
+    // FZ601 和 FZ602 都有19个站（18个区间）
     if (railwayLine == "FZ601" || railwayLine == "FZ602") {
-        return 14;
+        return 19;
     }
     return 0;
 }

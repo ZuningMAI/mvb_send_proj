@@ -29,7 +29,7 @@ private:
     // 查找指定区间的CSV文件
     static QString findSectionCSV(const QString &railwayLine, int startStn, int endStn);
     
-    // 获取线路的区间数量（FZ601和FZ602都是13个区间：1->2, 2->3, ..., 13->14）
+    // 获取线路的区间数量（FZ601和FZ602都是18个区间：1->2, 2->3, ..., 18->19）
     static int getLineStationCount(const QString &railwayLine);
 };
 

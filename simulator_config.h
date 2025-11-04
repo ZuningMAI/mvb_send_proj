@@ -83,6 +83,8 @@ public:
     int getStopTimeMin() const { return m_stopTimeMin; }
     int getStopTimeMax() const { return m_stopTimeMax; }
     bool isFrameSplitEnabled() const { return m_enableFrameSplit; }
+    int getRunInfoPeriodMs() const { return m_runInfoPeriodMs; }  // 状态数据周期(ms)
+    bool isRunInfoLoggingEnabled() const { return m_enableRunInfoLogging; }  // RunInfo数据记录
     
     // Setters
     void setRailwayLine(const QString &line) { m_railwayLine = line; }
@@ -98,6 +100,8 @@ public:
     void setStopTimeMin(int min) { m_stopTimeMin = min; }
     void setStopTimeMax(int max) { m_stopTimeMax = max; }
     void setEnableFrameSplit(bool enable) { m_enableFrameSplit = enable; }
+    void setRunInfoPeriodMs(int periodMs) { m_runInfoPeriodMs = periodMs; }
+    void setEnableRunInfoLogging(bool enable) { m_enableRunInfoLogging = enable; }
     
 private:
     // 线路配置
@@ -120,6 +124,8 @@ private:
     int m_stopTimeMin;          // 停站时间最小值 (s)
     int m_stopTimeMax;          // 停站时间最大值 (s)
     bool m_enableFrameSplit;    // 是否启用帧截断
+    int m_runInfoPeriodMs;      // 状态数据(PD 0xA0)发送周期 (ms), 可选: 128, 256, 512
+    bool m_enableRunInfoLogging; // 是否启用RunInfo数据记录到CSV
 };
 
 #endif // SIMULATOR_CONFIG_H

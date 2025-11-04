@@ -1,4 +1,5 @@
 #include "simulation_controller.h"
+#include "logger.h"
 #include <QDebug>
 #include <cstdlib>
 #include <ctime>
@@ -10,6 +11,7 @@ SimulationController::SimulationController(const SimulatorConfig &config, QObjec
     , m_serial(nullptr)
     , m_sender(nullptr)
     , m_speedLimiter(nullptr)
+    , m_runInfoLogger(nullptr)
     , m_currentSectionIndex(0)
     , m_isRunning(false)
     , m_isPaused(false)
@@ -21,6 +23,7 @@ SimulationController::SimulationController(const SimulatorConfig &config, QObjec
     , m_lifeSignal(0)
     , m_timer512ms(nullptr)
     , m_timer1024ms(nullptr)
+    , m_timerRunInfo(nullptr)
     , m_lastUpdateTime(0)
 {
     // 初始化随机数生成器
@@ -36,9 +39,11 @@ SimulationController::SimulationController(const SimulatorConfig &config, QObjec
     // 创建定时器
     m_timer512ms = new QTimer(this);
     m_timer1024ms = new QTimer(this);
+    m_timerRunInfo = new QTimer(this);
     
     connect(m_timer512ms, &QTimer::timeout, this, &SimulationController::onTimer512ms);
     connect(m_timer1024ms, &QTimer::timeout, this, &SimulationController::onTimer1024ms);
+    connect(m_timerRunInfo, &QTimer::timeout, this, &SimulationController::onTimerRunInfo);
 }
 
 SimulationController::~SimulationController()
@@ -53,6 +58,11 @@ SimulationController::~SimulationController()
     if (m_speedLimiter) {
         delete m_speedLimiter;
         m_speedLimiter = nullptr;
+    }
+    
+    if (m_runInfoLogger) {
+        delete m_runInfoLogger;
+        m_runInfoLogger = nullptr;
     }
 }
 
@@ -80,6 +90,16 @@ bool SimulationController::start()
     // 创建发送器
     m_sender = new SerialSender(m_serial, m_config.isFrameSplitEnabled());
     
+    // 创建RunInfo记录器
+    m_runInfoLogger = new RunInfoLogger(this);
+    m_runInfoLogger->setEnabled(m_config.isRunInfoLoggingEnabled());
+    
+    // 如果启用了RunInfo记录，开始记录当前区间
+    if (m_config.isRunInfoLoggingEnabled()) {
+        QString sectionName = getSectionName(m_currentSectionIndex);
+        m_runInfoLogger->startSection(sectionName, "Log");
+    }
+    
     // 初始化仿真状态
     m_currentSectionIndex = 0;
     m_simulationTime = 0.0;
@@ -89,8 +109,12 @@ bool SimulationController::start()
     m_isPaused = false;
     
     // 启动定时器
-    m_timer512ms->start(512);
-    m_timer1024ms->start(1024);
+    m_timer512ms->start(512);       // 时间数据和生命信号
+    m_timer1024ms->start(1024);     // 车号数据
+    m_timerRunInfo->start(m_config.getRunInfoPeriodMs());  // 状态数据（可配置周期）
+    
+    LOG_INFO(QString("定时器已启动 - 时间数据:512ms, 车号数据:1024ms, 状态数据:%1ms")
+             .arg(m_config.getRunInfoPeriodMs()));
     
     // 启动计时器
     m_elapsedTimer.start();
@@ -117,6 +141,11 @@ void SimulationController::stop()
     if (m_timer1024ms) {
         m_timer1024ms->stop();
     }
+    if (m_timerRunInfo) {
+        m_timerRunInfo->stop();
+    }
+    
+    LOG_INFO("仿真已停止，所有定时器已关闭");
     
     // 关闭串口
     if (m_serial && m_serial->isOpen()) {
@@ -230,14 +259,11 @@ void SimulationController::onTimer512ms()
     // 更新仿真时间
     updateCurrentState();
     
-    // 生命信号递增
+    // 生命信号递增（每512ms）
     m_lifeSignal++;
     
-    // 发送时间数据 (PD 0xFF)
+    // 发送时间数据 (PD 0xFF, 周期512ms)
     sendTimeData();
-    
-    // 发送运行状态数据 (PD 0xA0)
-    sendRunInfoData();
 }
 
 void SimulationController::onTimer1024ms()
@@ -246,8 +272,18 @@ void SimulationController::onTimer1024ms()
         return;
     }
     
-    // 发送车号数据 (PD 0xF1~0xF4)
+    // 发送车号数据 (PD 0xF1~0xF4, 周期1024ms)
     sendTrainData();
+}
+
+void SimulationController::onTimerRunInfo()
+{
+    if (m_isPaused) {
+        return;
+    }
+    
+    // 发送运行状态数据 (PD 0xA0, 周期可配置: 128/256/512ms)
+    sendRunInfoData();
 }
 
 void SimulationController::updateCurrentState()
@@ -306,6 +342,11 @@ void SimulationController::updateCurrentState()
 
 void SimulationController::switchToNextSection()
 {
+    // 结束当前区间的RunInfo记录
+    if (m_runInfoLogger && m_runInfoLogger->isEnabled()) {
+        m_runInfoLogger->endSection();
+    }
+    
     m_currentSectionIndex++;
     
     if (m_currentSectionIndex >= m_sections.size()) {
@@ -331,6 +372,12 @@ void SimulationController::switchToNextSection()
     
     // 重置区间时间
     m_simulationTime = 0.0;
+    
+    // 开始新区间的RunInfo记录
+    if (m_runInfoLogger && m_runInfoLogger->isEnabled()) {
+        QString sectionName = getSectionName(m_currentSectionIndex);
+        m_runInfoLogger->startSection(sectionName, "Log");
+    }
     
     qDebug() << "";
     qDebug() << "切换到区间" << (m_currentSectionIndex + 1) << "/" << m_sections.size();
@@ -441,11 +488,16 @@ void SimulationController::sendRunInfoData()
     );
     
     // 显示数据详情
-    runInfo.print();
+    // runInfo.print();
     qDebug() << "发送 \"RunInfoStruct\" 的USART-PPP帧数据";
     
     if (!m_sender->sendRunInfoStruct(runInfo)) {
         qWarning() << "发送运行状态数据失败";
+    }
+    
+    // 记录RunInfo数据到CSV（如果启用）
+    if (m_runInfoLogger && m_runInfoLogger->isEnabled()) {
+        m_runInfoLogger->logData(runInfo, currentPoint.position, limitSpeed);
     }
 }
 
@@ -467,10 +519,10 @@ int SimulationController::getNextStationID() const
 
 int SimulationController::getEndStationID() const
 {
-    // FZ601和FZ602的终点站都是14
+    // FZ601和FZ602的终点站都是19
     // 在区间模式下，应该返回整条线路的终点站，而不是当前区间的终点站
     if (m_config.getRailwayLine() == "FZ601" || m_config.getRailwayLine() == "FZ602") {
-        return 14;
+        return 19;
     }
     
     // 如果是其他线路且有数据，使用最后一个区间的终点站
@@ -478,6 +530,19 @@ int SimulationController::getEndStationID() const
         return m_sections.last().endStation;
     }
     
-    return 14;  // 默认值
+    return 19;  // 默认值
+}
+
+QString SimulationController::getSectionName(int sectionIndex) const
+{
+    if (sectionIndex >= 0 && sectionIndex < m_sections.size()) {
+        const SectionInfo &section = m_sections[sectionIndex];
+        // 格式: "FZ602-12-13"
+        return QString("%1-%2-%3")
+            .arg(m_config.getRailwayLine())
+            .arg(section.startStation)
+            .arg(section.endStation);
+    }
+    return QString("%1-unknown").arg(m_config.getRailwayLine());
 }
 

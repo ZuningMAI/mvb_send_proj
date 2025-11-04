@@ -33,6 +33,13 @@ release/
 obj/
 object_script.*
 
+# 日志文件
+bin/Log/
+*.log
+
+# 测试数据（可选：如果数据文件太大，取消下面的注释）
+# bin/data/
+
 # 临时文件
 *.swp
 *.swo

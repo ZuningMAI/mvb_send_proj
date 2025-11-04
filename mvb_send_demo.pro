@@ -31,7 +31,9 @@ HEADERS += \
         speed_limiter.h \
         data_generator.h \
         serial_sender.h \
-        simulation_controller.h
+        simulation_controller.h \
+        logger.h \
+        runinfo_logger.h
 
 SOURCES += \
         main.cpp \
@@ -42,7 +44,9 @@ SOURCES += \
         speed_limiter.cpp \
         data_generator.cpp \
         serial_sender.cpp \
-        simulation_controller.cpp
+        simulation_controller.cpp \
+        logger.cpp \
+        runinfo_logger.cpp
 
 # Default rules for deployment.
 qnx: target.path = /tmp/$${TARGET}/bin

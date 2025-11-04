@@ -14,10 +14,12 @@
     },
     "simulation": {
         "runMode": "SECTION",
-        "dataProcessMode": "MAINTAIN",
-        "csvFile": "data/FZ602/interactive_test_FZ602-12-13_dv1e-22025-10-26_17-54-42/OptReslog.2025-10-26_17-54-42-FZ602-12-13-250.csv",
+        "dataProcessMode": "INTERPOLATION",
+        "csvFile": "data/FZ602/interactive_test_FZ602-12-13_dv1e-22025-11-03_21-29-11/OptReslog.2025-11-03_21-29-11-FZ602-12-13-250.csv",
         "stopTimeMin": 30,
         "stopTimeMax": 60,
-        "enableFrameSplit": false
+        "enableFrameSplit": true,
+        "runInfoPeriodMs": 128,
+        "enableRunInfoLogging": false
     }
 }

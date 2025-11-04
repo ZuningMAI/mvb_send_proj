@@ -7,6 +7,7 @@
 #include "speed_limiter.h"
 #include "data_generator.h"
 #include "serial_sender.h"
+#include "runinfo_logger.h"
 #include <QObject>
 #include <QSerialPort>
 #include <QTimer>
@@ -40,8 +41,9 @@ signals:
     void statusUpdate(const QString &status);
     
 private slots:
-    void onTimer512ms();    // 处理512ms定时器
-    void onTimer1024ms();   // 处理1024ms定时器
+    void onTimer512ms();        // 处理512ms定时器（时间数据和生命信号）
+    void onTimer1024ms();       // 处理1024ms定时器（车号数据）
+    void onTimerRunInfo();      // 处理状态数据定时器（可配置周期）
     
 private:
     // 初始化串口
@@ -76,11 +78,15 @@ private:
     int getNextStationID() const;
     int getEndStationID() const;
     
+    // 获取区间名称
+    QString getSectionName(int sectionIndex) const;
+    
 private:
     SimulatorConfig m_config;
     QSerialPort *m_serial;
     SerialSender *m_sender;
     SpeedLimiter *m_speedLimiter;
+    RunInfoLogger *m_runInfoLogger;  // RunInfo数据记录器
     
     // 数据
     QVector<SectionInfo> m_sections;
@@ -101,6 +107,7 @@ private:
     // 定时器
     QTimer *m_timer512ms;
     QTimer *m_timer1024ms;
+    QTimer *m_timerRunInfo;         // 状态数据定时器（可配置周期）
     QElapsedTimer m_elapsedTimer;   // 用于计时
     qint64 m_lastUpdateTime;        // 上次更新时间（毫秒）
 };
