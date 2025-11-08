@@ -134,10 +134,10 @@ QVector<QByteArray> SerialSender::splitFrame(const QByteArray &frame)
     QByteArray frame1;
     frame1.append(0x7E);
     frame1.append(part1);
-    frame1.append(0x7E);
+    // frame1.append(0x7E);
     
     QByteArray frame2;
-    frame2.append(0x7E);
+    // frame2.append(0x7E);
     frame2.append(part2);
     frame2.append(0x7E);
     
