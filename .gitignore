@@ -56,3 +56,7 @@ DOCS/
 *.md
 !README.md
 
+# 允许 send_rev_analysis 目录及其内容被跟踪（修正拼写）
+!send_rev_analysis/
+
+
