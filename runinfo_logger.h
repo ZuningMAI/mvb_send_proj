@@ -21,17 +21,38 @@ class RunInfoLogger : public QObject
 public:
     // 单条数据记录
     struct RunInfoRecord {
-        double relativeTime;      // 相对时间（秒）
+        double relativeTime;      // 相对时间（秒） add 0
+        quint16 lifeSignal;       // 生命信号
+        quint16 railwayID;        // 线路ID
+        quint16 endStationID;     // 终点站ID
+        quint16 nextStationID;    // 下一站ID
+        quint16 currentStationID; // 当前站ID
         quint16 targetDistance;   // 目标距离（m）
         quint16 startDistance;    // 起始距离（m）
+        quint16 trainLoad;        // 列车载荷(1=0.1t)
+        quint16 limitSpeed;       // 限速（km/h）
+        quint16 netVoltage;       // 网侧电压（V）
+        quint16 netCurrent;       // 网侧电流（0.1A）
         quint16 speed;            // 运行速度（0.01km/h）
-        double position;          // 位置（m）
         quint16 tractionForce;    // 牵引力（0.1kN）
         quint16 ebrakeForce;      // 电制动力（0.1kN）
         quint16 airbrakeForce;    // 空气制动力（0.1kN）
-        quint16 netVoltage;       // 网侧电压（V）
-        quint16 netCurrent;       // 网侧电流（0.1A）
-        quint16 limitSpeed;       // 限速（km/h）
+        bool endStationIdAvaliable; // 终点站ID有效
+        bool nextStationIdAvaliable; // 下一站ID有效
+        bool currentStationIdAvaliable; // 当前站ID有效
+        bool targetDistanceAvaliable; // 目标距离有效
+        bool startDistanceAvaliable; // 起始距离有效
+        bool ATOMode; // ATO模式
+        bool TmcActivity_1; // Tmc1司机室
+        bool TmcActivity_2; // Tmc2司机室
+        bool coasting; // 惰行
+        bool traction; // 牵引
+        bool ebraking; // 制动
+        bool loadAW_0; // 载荷AW0
+        bool loadAW_2; // 载荷AW2
+        bool loadAW_3; // 载荷AW3
+        double position;          // 位置（m） add 1
+          
     };
 
     explicit RunInfoLogger(QObject *parent = nullptr);

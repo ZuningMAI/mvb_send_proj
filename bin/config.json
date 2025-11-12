@@ -20,6 +20,6 @@
         "stopTimeMax": 60,
         "enableFrameSplit": true,
         "runInfoPeriodMs": 128,
-        "enableRunInfoLogging": false
+        "enableRunInfoLogging": true
     }
 }
